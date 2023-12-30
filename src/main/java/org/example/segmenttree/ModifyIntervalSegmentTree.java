@@ -1,100 +1,100 @@
 package org.example.segmenttree;
 
+import java.util.Arrays;
+
 /**
  * 范围修改线段树的值
  */
-public class ModifyIntervalSegmentTree {
+class ModifyIntervalSegmentTree {
 
-    int[] nums;
-    Node[] tree;
+    private final Node[] tree;
+    private final int[] arr;
 
-    public ModifyIntervalSegmentTree(int[] nums) {
-        this.nums = nums;
-        //这里是考虑到建立二叉树的最坏情况
-        tree = new Node[nums.length * 4];
-        build(1, 1, nums.length);
+    public ModifyIntervalSegmentTree(int[] arr) {
+        tree = new Node[arr.length << 2];
+        this.arr = Arrays.copyOf(arr, arr.length);
+        buildTree(0, arr.length - 1, 0);
+    }
+
+    //从数组left->right，每个数据加上val
+    public void updateTree(int left, int right, int val) {
+        updateTree(left, right, val, 0);
+    }
+
+    //查询数组left->right累加和1
+    public int queryTree(int left, int right) {
+        return queryTree(left, right, 0);
     }
 
     /**
-     * 建树
-     *
-     * @param pos   当前节点编号
-     * @param left  当前节点区间下限
-     * @param right 当前节点区间上限
+     * @param left  左区间
+     * @param right 有区间
+     * @param node  tree数组的下标
      */
-    private void build(int pos, int left, int right) {
-        //创建节点
-        tree[pos] = new Node(left, right);
+    private void buildTree(int left, int right, int node) {
+        tree[node] = new Node(left, right);
         if (left == right) {
-            tree[pos].val = nums[left - 1];
+            tree[node].sum = arr[left];
             return;
         }
-        int mid = left + right >> 1;
-        build(pos << 1, left, mid);
-        build(pos << 1 | 1, mid + 1, right);
-        pushUp(pos);
+        int mid = (left + right) >> 1;
+        int leftNode = (node << 1) + 1, rightNode = leftNode + 1;
+        buildTree(left, mid, leftNode);
+        buildTree(mid + 1, right, rightNode);
+        tree[node].sum = (tree[leftNode].sum + tree[rightNode].sum);
     }
 
-    /**
-     * 用于向上回溯时修改父节点的值
-     *
-     * @param pos
-     */
-    private void pushUp(int pos) {
-        tree[pos].val = tree[pos << 1].val + tree[pos << 1 | 1].val;
-    }
-
-    private void pushDown(int pos) {
-        if (tree[pos].left == tree[pos].right || tree[pos].add == 0) {
+    private void updateTree(int left, int right, int val, int node) {
+        if (left <= tree[node].l && right >= tree[node].r) {
+            tree[node].sum += (tree[node].r - tree[node].l + 1) * val;
+            tree[node].tag += val;
             return;
         }
-        int add = tree[pos].add;
-        tree[pos << 1].val = add * (tree[pos << 1].right - tree[pos << 1].left + 1);
-        tree[pos << 1 | 1].val = add * (tree[pos << 1 | 1].right - tree[pos << 1].left + 1);
-        tree[pos].add = 0;
-        tree[pos << 1].add += add;
-        tree[pos << 1 | 1].add += add;
+        if (tree[node].tag != 0) pushDown(node);
+        int mid = (tree[node].l + tree[node].r) >> 1;
+        int leftNode = (node << 1) + 1, rightNode = leftNode + 1;
+        if (right <= mid) {
+            updateTree(left, right, val, leftNode);
+        } else if (left > mid) {
+            updateTree(left, right, val, rightNode);
+        } else {
+            updateTree(left, right, val, leftNode);
+            updateTree(left, right, val, rightNode);
+        }
+        tree[node].sum = (tree[leftNode].sum + tree[rightNode].sum);
     }
 
-    /**
-     * 修改单节点的值
-     *
-     * @param pos   当前节点编号
-     * @param left  要修改的上线
-     * @param right 要修改的下限
-     * @param val   修改后的值
-     */
-    private void update(int pos, int left, int right, int val) {
-        if (tree[pos].left <= left && tree[pos].right >= right) {
-            tree[pos].val = val * (right - left + 1);
-            tree[pos].add = val;
-            return;
-        }
-        pushDown(val);
-        int mid = tree[pos].left + tree[pos].right << 1;
-        if (mid >= left) {
-            update(pos << 1, left, right, val);
-        }
-        if (mid < right) {
-            update(pos << 1 | 1, left, right, val);
-        }
-        pushUp(pos);
+    private void pushDown(int node) {
+        long val = tree[node].tag;
+        int mid = (tree[node].l + tree[node].r) >> 1;
+        int leftNode = (node << 1) + 1, rightNode = leftNode + 1;
+        tree[leftNode].sum += (mid - tree[node].l + 1) * val;
+        tree[rightNode].sum += (tree[node].r - mid) * val;
+        tree[leftNode].tag += val;
+        tree[rightNode].tag += val;
+        tree[node].tag = 0;
     }
 
-    public int query(int pos, int left, int right) {
-        //如果当前节点包含被上下限包含，直接返回
-        if (left <= tree[pos].left && right >= tree[pos].right) {
-            return tree[pos].val;
+    private int queryTree(int left, int right, int node) {
+        if (left <= tree[node].l && right >= tree[node].r) return tree[node].sum;
+        if (tree[node].tag != 0) pushDown(node);
+        int mid = (tree[node].l + tree[node].r) >> 1;
+        int leftNode = (node << 1) + 1, rightNode = leftNode + 1;
+        if (right <= mid) {
+            return queryTree(left, right, leftNode);
+        } else if (left > mid) {
+            return queryTree(left, right, rightNode);
         }
-        pushDown(pos);
-        int res = 0;
-        int mid = tree[pos].left + tree[pos].right >> 1;
-        if (mid <= left) {
-            res += query(pos << 1, left, right);
+        return queryTree(left, right, leftNode) + queryTree(left, right, rightNode);
+    }
+
+    static class Node {
+        int l, r;
+        int sum, tag;
+
+        public Node(int l, int r) {
+            this.l = l;
+            this.r = r;
         }
-        if (right > mid) {
-            res += query(pos << 1 | 1, left, right);
-        }
-        return res;
     }
 }
