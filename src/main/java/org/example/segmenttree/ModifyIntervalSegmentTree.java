@@ -65,7 +65,7 @@ class ModifyIntervalSegmentTree {
     }
 
     private void pushDown(int node) {
-        long val = tree[node].tag;
+        int val = tree[node].tag;
         int mid = (tree[node].l + tree[node].r) >> 1;
         int leftNode = (node << 1) + 1, rightNode = leftNode + 1;
         tree[leftNode].sum += (mid - tree[node].l + 1) * val;
