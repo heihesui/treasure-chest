@@ -71,11 +71,12 @@ public class SegmentTree {
         }
         int res = 0;
         int mid = tree[pos].left + tree[pos].right >> 1;
-        if (mid <= left) {
-            res += query(pos << 1, left, right);
-        }
-        if (right > mid) {
-            res += query(pos << 1 | 1, left, right);
+        if (mid >= right) {
+            res = query(pos << 1, left, right);
+        } else if (left > mid) {
+            res = query(pos << 1 | 1, left, right);
+        } else {
+            res = query(pos << 1, left, mid) + query(pos << 1 | 1, mid + 1, right);
         }
         return res;
     }
